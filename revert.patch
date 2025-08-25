@@ -1,0 +1,152 @@
+From b8a21809e095f606f1b1f67319d35d66d8294bec Mon Sep 17 00:00:00 2001
+From: Selfmuser <109387456+selfmusing@users.noreply.github.com>
+Date: Mon, 25 Aug 2025 09:04:36 +0530
+Subject: [PATCH] Revert "Settings: Add FastCharge preference into Battery
+ settings"
+
+This reverts commit ad51af7bccf7260237672a73ba0da3c186b4a392.
+---
+ Android.bp                                    |  1 -
+ res/values/cm_strings.xml                     |  4 -
+ res/xml/power_usage_summary.xml               |  6 --
+ .../FastChargingPreferenceController.java     | 84 -------------------
+ 4 files changed, 95 deletions(-)
+ delete mode 100644 src/com/android/settings/fuelgauge/FastChargingPreferenceController.java
+
+diff --git a/Android.bp b/Android.bp
+index fa67bff9cee..7ff52b8ddec 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -132,7 +132,6 @@ android_library {
+         // Lineage dependencies
+         "org.lineageos.platform.internal",
+         "LineagePreferenceLib",
+-        "vendor.lineage.fastcharge-V1.0-java",
+ 
+         // DerpFest dependencies
+         "VendorSupport-preference",
+diff --git a/res/values/cm_strings.xml b/res/values/cm_strings.xml
+index 9021d74fe06..6febe97e878 100644
+--- a/res/values/cm_strings.xml
++++ b/res/values/cm_strings.xml
+@@ -145,10 +145,6 @@
+     <string name="wake_when_plugged_or_unplugged_title">Wake on plug</string>
+     <string name="wake_when_plugged_or_unplugged_summary">Turn the screen on when connecting or disconnecting a power source</string>
+ 
+-    <!-- FastCharge feature -->
+-    <string name="fast_charging_title">Fast charging</string>
+-    <string name="fast_charging_summary">Disable to reduce the heat produced by the device while charging or to extend the lifespan of the battery</string>
+-
+     <!-- Warning message for the sd card setup -->
+     <string name="storage_warning_internal">Warning: This option may not work properly or lead to data loss and is therefore not recommended!</string>
+ 
+diff --git a/res/xml/power_usage_summary.xml b/res/xml/power_usage_summary.xml
+index f1a80fccebb..dc26939dcd2 100644
+--- a/res/xml/power_usage_summary.xml
++++ b/res/xml/power_usage_summary.xml
+@@ -85,12 +85,6 @@
+         android:summary="@string/battery_percentage_description"
+         settings:controller="com.android.settings.display.BatteryPercentagePreferenceController" />
+ 
+-    <SwitchPreferenceCompat
+-        android:key="fast_charging"
+-        android:title="@string/fast_charging_title"
+-        android:summary="@string/fast_charging_summary"
+-        settings:controller="com.android.settings.fuelgauge.FastChargingPreferenceController"/>
+-
+     <Preference
+         android:key="battery_info"
+         android:title="@string/battery_info"
+diff --git a/src/com/android/settings/fuelgauge/FastChargingPreferenceController.java b/src/com/android/settings/fuelgauge/FastChargingPreferenceController.java
+deleted file mode 100644
+index a4eea6e11b4..00000000000
+--- a/src/com/android/settings/fuelgauge/FastChargingPreferenceController.java
++++ /dev/null
+@@ -1,84 +0,0 @@
+-/*
+- * Copyright (C) 2021 The LineageOS Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-package com.android.settings.fuelgauge;
+-
+-import android.content.Context;
+-import android.os.RemoteException;
+-import android.util.Log;
+-
+-import androidx.preference.Preference;
+-import androidx.preference.SwitchPreferenceCompat;
+-
+-import com.android.settings.core.BasePreferenceController;
+-
+-import vendor.lineage.fastcharge.V1_0.IFastCharge;
+-
+-import java.util.NoSuchElementException;
+-
+-/**
+- * Controller to change and update the fast charging toggle
+- */
+-public class FastChargingPreferenceController extends BasePreferenceController
+-        implements Preference.OnPreferenceChangeListener {
+-
+-    private static final String KEY_FAST_CHARGING = "fast_charging";
+-    private static final String TAG = "FastChargingPreferenceController";
+-
+-    private IFastCharge mFastCharge = null;
+-
+-    public FastChargingPreferenceController(Context context) {
+-        super(context, KEY_FAST_CHARGING);
+-        try {
+-            mFastCharge = IFastCharge.getService();
+-        } catch (NoSuchElementException | RemoteException e) {
+-            Log.e(TAG, "Failed to get IFastCharge interface", e);
+-        }
+-    }
+-
+-    @Override
+-    public int getAvailabilityStatus() {
+-        return mFastCharge != null ? AVAILABLE : UNSUPPORTED_ON_DEVICE;
+-    }
+-
+-    @Override
+-    public void updateState(Preference preference) {
+-        super.updateState(preference);
+-        boolean fastChargingEnabled = false;
+-
+-        try {
+-            fastChargingEnabled = mFastCharge.isEnabled();
+-        } catch (RemoteException e) {
+-            Log.e(TAG, "isEnabled failed", e);
+-        }
+-
+-        ((SwitchPreferenceCompat) preference).setChecked(fastChargingEnabled);
+-    }
+-
+-    @Override
+-    public boolean onPreferenceChange(Preference preference, Object newValue) {
+-        final boolean shouldEnableFastCharging = (Boolean) newValue;
+-
+-        try {
+-            mFastCharge.setEnabled(shouldEnableFastCharging);
+-            updateState(preference);
+-        } catch (RemoteException e) {
+-            Log.e(TAG, "setEnabled failed", e);
+-        }
+-
+-        return false;
+-    }
+-}
+-- 
+2.34.1
+
